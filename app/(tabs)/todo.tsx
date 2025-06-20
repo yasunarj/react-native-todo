@@ -6,7 +6,6 @@ import {
   View,
   TextInput,
   Button,
-  FlatList,
   StyleSheet,
   TouchableOpacity,
 } from "react-native";
