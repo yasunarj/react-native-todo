@@ -1,23 +1,34 @@
 import { useState } from "react";
 import { SwipeListView } from "react-native-swipe-list-view";
-
 import {
   Text,
   View,
   TextInput,
   Button,
-  FlatList,
   StyleSheet,
   TouchableOpacity,
+  Pressable,
 } from "react-native";
+
+type TaskState = {
+  id: number;
+  list: string;
+  isCompleted: boolean;
+};
 
 const TodoScreen = () => {
   const [task, setTask] = useState<string>("");
-  const [tasks, setTasks] = useState<string[]>([]);
+  const [tasks, setTasks] = useState<TaskState[]>([]);
 
   const addTask = () => {
     if (task.trim() !== "") {
-      setTasks([...tasks, task]);
+      const newTask = {
+        id: Date.now(),
+        list: task,
+        isCompleted: false,
+      };
+
+      setTasks((prev) => [...prev, newTask]);
       setTask("");
     }
   };
@@ -26,7 +37,15 @@ const TodoScreen = () => {
     const newTasks = [...tasks];
     newTasks.splice(index, 1);
     setTasks(newTasks);
-  }
+  };
+
+  const toggleTaskCompletion = (id: number) => {
+    setTasks((prevTasks) => {
+      return prevTasks.map((task) =>
+        task.id === id ? { ...task, isCompleted: !task.isCompleted } : task
+      );
+    });
+  };
 
   return (
     <View style={styles.container}>
@@ -43,26 +62,39 @@ const TodoScreen = () => {
       </View>
 
       <SwipeListView
-        data={tasks.map((item, index) => ({ key: index.toString(), value: item }))}
+        data={tasks.map((item) => ({
+          key: item.id,
+          id: item.id,
+          isCompleted: item.isCompleted,
+          list: item.list,
+        }))}
         renderItem={({ item }) => (
-          <View style={styles.rowFront}>
-            <Text>・{item.value}</Text>
-          </View>
+          <Pressable
+            onPress={() => toggleTaskCompletion(item.id)}
+            style={({pressed}) => [
+              styles.taskItem,
+              { opacity: 1 },
+            ]}
+          >
+              <Text
+                style={[
+                  styles.taskText,
+                  item.isCompleted && styles.completedText,
+                ]}
+              >
+                {item.list}
+              </Text>
+          </Pressable>
         )}
         renderHiddenItem={({ index }) => (
           <View style={styles.rowBack}>
-            <TouchableOpacity onPress={() => handleDelete(index)} style={styles.deleteButton}>
+            <TouchableOpacity onPress={() => handleDelete(index)}>
               <Text style={styles.deleteText}>削除</Text>
             </TouchableOpacity>
           </View>
         )}
         rightOpenValue={-75}
       />
-      {/* <FlatList
-        data={tasks}
-        keyExtractor={(item, index) => index.toString()}
-        renderItem={({ item }) => <Text style={styles.taskItem}>・{item}</Text>}
-      /> */}
     </View>
   );
 };
@@ -92,32 +124,38 @@ const styles = StyleSheet.create({
     borderRadius: 5,
   },
   rowFront: {
-    backgroundColor: '#f2f2f2',
+    backgroundColor: "#f2f2f2",
     padding: 15,
     marginBottom: 10,
     borderRadius: 5,
   },
   rowBack: {
-    alignItems: 'flex-end',
-    backgroundColor: 'red',
+    height: "100%",
+    alignItems: "flex-end",
+    backgroundColor: "red",
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: "center",
     paddingRight: 20,
     borderRadius: 5,
     marginBottom: 10,
   },
-  deleteButton: {
-    height: '100%',
-    justifyContent: 'center',
-  },
   deleteText: {
-    color: '#fff',
-    fontWeight: 'bold',
-  }
-  // taskItem: {
-  //   fontSize: 18,
-  //   marginVertical: 5,
-  // },
+    color: "#fff",
+    fontWeight: "bold",
+  },
+  taskItem: {
+    padding: 15,
+    backgroundColor: "#eee",
+    borderRadius: 5,
+    marginBottom: 10,
+  },
+  taskText: {
+    fontSize: 16,
+  },
+  completedText: {
+    textDecorationLine: "line-through",
+    color: "#9f9595",
+  },
 });
 
 export default TodoScreen;
