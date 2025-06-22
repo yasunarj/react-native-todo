@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { SwipeListView } from "react-native-swipe-list-view";
 import {
   Text,
@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   Pressable,
 } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 type TaskState = {
   id: number;
@@ -20,7 +21,38 @@ const TodoScreen = () => {
   const [task, setTask] = useState<string>("");
   const [tasks, setTasks] = useState<TaskState[]>([]);
 
-  const addTask = () => {
+  useEffect(() => {
+    const loadTasksFromStorage = async () => {
+      try {
+        const json = await AsyncStorage.getItem("TASKS");
+        if(json) {
+          const savedTasks: TaskState[] = JSON.parse(json);
+          setTasks(savedTasks);
+        }
+      } catch(e) {
+        console.error("データの取得に失敗しました", e);
+      }
+    }
+    loadTasksFromStorage();
+  }, []);
+
+  const saveTasksToStorage = async (tasks: TaskState[]) => {
+    try {
+      const json = JSON.stringify(tasks);
+      await AsyncStorage.setItem("TASKS", json);
+    } catch (e) {
+      console.error("保存できませんでした", e);
+    }
+  };
+
+  useEffect(() => {
+    const changedTasks = async () => {
+      await saveTasksToStorage(tasks);
+    }
+    changedTasks();
+  }, [tasks]);
+
+  const addTask = async () => {
     if (task.trim() !== "") {
       const newTask = {
         id: Date.now(),
@@ -33,13 +65,13 @@ const TodoScreen = () => {
     }
   };
 
-  const handleDelete = (index: number) => {
+  const handleDelete = async (index: number) => {
     const newTasks = [...tasks];
     newTasks.splice(index, 1);
     setTasks(newTasks);
   };
 
-  const toggleTaskCompletion = (id: number) => {
+  const toggleTaskCompletion = async (id: number) => {
     setTasks((prevTasks) => {
       return prevTasks.map((task) =>
         task.id === id ? { ...task, isCompleted: !task.isCompleted } : task
@@ -63,7 +95,7 @@ const TodoScreen = () => {
 
       <SwipeListView
         data={tasks.map((item) => ({
-          key: item.id,
+          key: String(item.id),
           id: item.id,
           isCompleted: item.isCompleted,
           list: item.list,
@@ -71,19 +103,16 @@ const TodoScreen = () => {
         renderItem={({ item }) => (
           <Pressable
             onPress={() => toggleTaskCompletion(item.id)}
-            style={({pressed}) => [
-              styles.taskItem,
-              { opacity: 1 },
-            ]}
+            style={({ pressed }) => [styles.taskItem, { opacity: 1 }]}
           >
-              <Text
-                style={[
-                  styles.taskText,
-                  item.isCompleted && styles.completedText,
-                ]}
-              >
-                {item.list}
-              </Text>
+            <Text
+              style={[
+                styles.taskText,
+                item.isCompleted && styles.completedText,
+              ]}
+            >
+              {item.list}
+            </Text>
           </Pressable>
         )}
         renderHiddenItem={({ index }) => (
