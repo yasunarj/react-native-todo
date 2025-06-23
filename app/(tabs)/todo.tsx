@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   Pressable,
   Alert,
+  useColorScheme,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
@@ -22,6 +23,8 @@ const TodoScreen = () => {
   const [task, setTask] = useState<string>("");
   const [tasks, setTasks] = useState<TaskState[]>([]);
   const [hideCompleted, setHideCompleted] = useState<boolean>(false);
+  const colorScheme = useColorScheme();
+  const isDarkMode = colorScheme === "dark";
 
   useEffect(() => {
     const loadTasksFromStorage = async () => {
@@ -74,7 +77,7 @@ const TodoScreen = () => {
   const handleClearCompleted = () => {
     const deleteLists = tasks.filter((task) => task.isCompleted);
 
-    if(deleteLists.length === 0) {
+    if (deleteLists.length === 0) {
       Alert.alert("情報", "削除するタスクがありません");
       return;
     }
@@ -111,12 +114,17 @@ const TodoScreen = () => {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.heading}>📝 ToDoアプリ</Text>
+    <View
+      style={[
+        styles.container,
+        { backgroundColor: isDarkMode ? "#000" : "#fff" },
+      ]}
+    >
+      <Text style={[styles.heading, { color: isDarkMode ? "#fff" :"#000" }]}>📝 ToDoアプリ</Text>
 
       <View style={styles.inputContainer}>
         <TextInput
-          style={styles.input}
+          style={[styles.input, {color: isDarkMode ? "#fff" : "#000"}]}
           placeholder="タスクを入力してください"
           value={task}
           onChangeText={setTask}
