@@ -8,6 +8,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   Pressable,
+  Alert,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
@@ -70,6 +71,37 @@ const TodoScreen = () => {
     setTasks((prevTasks) => prevTasks.filter((task) => task.id !== id));
   };
 
+  const handleClearCompleted = () => {
+    const deleteLists = tasks.filter((task) => task.isCompleted);
+
+    if(deleteLists.length === 0) {
+      Alert.alert("情報", "削除するタスクがありません");
+      return;
+    }
+
+    Alert.alert(
+      "確認",
+      "削除を実行してよろしいですか？",
+      [
+        {
+          text: "キャンセル",
+          style: "cancel",
+        },
+        {
+          text: "削除する",
+          style: "destructive",
+          onPress: () => {
+            setTasks((prevTasks) =>
+              prevTasks.filter((task) => !task.isCompleted)
+            );
+            Alert.alert("削除完了", "完了したタスクを削除しました");
+          },
+        },
+      ],
+      { cancelable: true }
+    );
+  };
+
   const toggleTaskCompletion = async (id: number) => {
     setTasks((prevTasks) => {
       return prevTasks.map((task) =>
@@ -96,6 +128,13 @@ const TodoScreen = () => {
         <Button
           title={hideCompleted ? "完了タスクを表示" : "完了タスクを非表示"}
           onPress={() => setHideCompleted((prev) => !prev)}
+        />
+      </View>
+
+      <View style={styles.clearContainer}>
+        <Button
+          title="完了したタスクを全て削除"
+          onPress={handleClearCompleted}
         />
       </View>
 
@@ -142,7 +181,7 @@ const TodoScreen = () => {
         rightOpenValue={-75}
       />
     </View>
-  )
+  );
 };
 
 const styles = StyleSheet.create({
@@ -205,7 +244,11 @@ const styles = StyleSheet.create({
   toggleContainer: {
     marginBottom: 10,
     alignItems: "flex-end",
-  }
+  },
+  clearContainer: {
+    marginBottom: 10,
+    alignItems: "flex-end",
+  },
 });
 
 export default TodoScreen;
