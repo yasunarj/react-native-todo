@@ -1,59 +1,45 @@
-import { useState, useEffect } from "react";
-import { SwipeListView } from "react-native-swipe-list-view";
+import DateTimePicker from "@react-native-community/datetimepicker";
+import { useEffect, useState } from "react";
 import {
-  Text,
-  View,
-  TextInput,
+  Alert,
   Button,
   StyleSheet,
+  Text,
+  TextInput,
   TouchableOpacity,
-  Pressable,
-  Alert,
   useColorScheme,
+  View,
 } from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-
-type TaskState = {
-  id: number;
-  list: string;
-  isCompleted: boolean;
-};
+import { SwipeListView } from "react-native-swipe-list-view";
+import TaskItem from "../../components/TaskItem";
+import { loadTasks, saveTasks } from "@/lib/storage";
+import { TaskState } from "../../types/task";
 
 const TodoScreen = () => {
   const [task, setTask] = useState<string>("");
   const [tasks, setTasks] = useState<TaskState[]>([]);
+  const [dueDate, setDueDate] = useState<Date>(new Date());
+  const [showDatePicker, setShowDatePicker] = useState<boolean>(false);
   const [hideCompleted, setHideCompleted] = useState<boolean>(false);
   const colorScheme = useColorScheme();
   const isDarkMode = colorScheme === "dark";
 
+  const sortedTasks = [...tasks].sort((a, b) =>
+    (a.dueDate || "9999-12-31").localeCompare(b.dueDate || "9999-12-31")
+  );
+
   useEffect(() => {
     const loadTasksFromStorage = async () => {
-      try {
-        const json = await AsyncStorage.getItem("TASKS");
-        if (json) {
-          const savedTasks: TaskState[] = JSON.parse(json);
-          setTasks(savedTasks);
-        }
-      } catch (e) {
-        console.error("データの取得に失敗しました", e);
-      }
+      const result = await loadTasks();
+      setTasks(result);
     };
     loadTasksFromStorage();
   }, []);
 
-  const saveTasksToStorage = async (tasks: TaskState[]) => {
-    try {
-      const json = JSON.stringify(tasks);
-      await AsyncStorage.setItem("TASKS", json);
-    } catch (e) {
-      console.error("保存できませんでした", e);
-    }
-  };
-
   useEffect(() => {
     const changedTasks = async () => {
-      await saveTasksToStorage(tasks);
-    };
+      await saveTasks(tasks);
+    }
     changedTasks();
   }, [tasks]);
 
@@ -63,10 +49,13 @@ const TodoScreen = () => {
         id: Date.now(),
         list: task,
         isCompleted: false,
+        dueDate: showDatePicker ? dueDate.toISOString().split("T")[0] : null,
       };
 
       setTasks((prev) => [...prev, newTask]);
       setTask("");
+      setDueDate(new Date());
+      setShowDatePicker(false);
     }
   };
 
@@ -120,17 +109,40 @@ const TodoScreen = () => {
         { backgroundColor: isDarkMode ? "#000" : "#fff" },
       ]}
     >
-      <Text style={[styles.heading, { color: isDarkMode ? "#fff" :"#000" }]}>📝 ToDoアプリ</Text>
+      <Text style={[styles.heading, { color: isDarkMode ? "#fff" : "#000" }]}>
+        📝 ToDoアプリ
+      </Text>
 
       <View style={styles.inputContainer}>
         <TextInput
-          style={[styles.input, {color: isDarkMode ? "#fff" : "#000"}]}
+          style={[styles.input, { color: isDarkMode ? "#fff" : "#000" }]}
           placeholder="タスクを入力してください"
           value={task}
           onChangeText={setTask}
         />
         <Button title="追加" onPress={addTask} />
       </View>
+
+      <View style={styles.dateContainer}>
+        <Text>期限: {dueDate.toISOString().split("T")[0]}</Text>
+        <Button
+          title="日付を選択"
+          onPress={() => setShowDatePicker(true)}
+        ></Button>
+      </View>
+
+      {showDatePicker && (
+        <DateTimePicker
+          value={dueDate}
+          mode="date"
+          display="default"
+          onChange={(event, selectedDate) => {
+            if (selectedDate) {
+              setDueDate(selectedDate);
+            }
+          }}
+        />
+      )}
 
       <View style={styles.toggleContainer}>
         <Button
@@ -149,36 +161,26 @@ const TodoScreen = () => {
       <SwipeListView
         data={
           hideCompleted
-            ? tasks
+            ? sortedTasks
                 .filter((t) => !t.isCompleted)
                 .map((item) => ({
                   key: String(item.id),
                   id: item.id,
                   isCompleted: item.isCompleted,
                   list: item.list,
+                  dueDate: item.dueDate,
                 }))
-            : tasks.map((item) => ({
+            : sortedTasks.map((item) => ({
                 key: String(item.id),
                 id: item.id,
                 isCompleted: item.isCompleted,
                 list: item.list,
+                dueDate: item.dueDate,
               }))
         }
-        renderItem={({ item }) => (
-          <Pressable
-            onPress={() => toggleTaskCompletion(item.id)}
-            style={({ pressed }) => [styles.taskItem, { opacity: 1 }]}
-          >
-            <Text
-              style={[
-                styles.taskText,
-                item.isCompleted && styles.completedText,
-              ]}
-            >
-              {item.list}
-            </Text>
-          </Pressable>
-        )}
+        renderItem={({ item }) => {
+          return <TaskItem item={item} onToggle={toggleTaskCompletion} />;
+        }}
         renderHiddenItem={({ item }) => (
           <View style={styles.rowBack}>
             <TouchableOpacity onPress={() => handleDelete(item.id)}>
@@ -236,19 +238,6 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontWeight: "bold",
   },
-  taskItem: {
-    padding: 15,
-    backgroundColor: "#eee",
-    borderRadius: 5,
-    marginBottom: 10,
-  },
-  taskText: {
-    fontSize: 16,
-  },
-  completedText: {
-    textDecorationLine: "line-through",
-    color: "#9f9595",
-  },
   toggleContainer: {
     marginBottom: 10,
     alignItems: "flex-end",
@@ -256,6 +245,9 @@ const styles = StyleSheet.create({
   clearContainer: {
     marginBottom: 10,
     alignItems: "flex-end",
+  },
+  dateContainer: {
+    marginBottom: 10,
   },
 });
 
