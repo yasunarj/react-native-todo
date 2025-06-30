@@ -1,5 +1,6 @@
-import { Pressable, StyleSheet, Text } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { getDueDateStatus } from "@/lib/getDueDateStatus";
+import { TAG_COLORS } from "@/lib/constans";
 
 type Props = {
   item: {
@@ -7,20 +8,40 @@ type Props = {
     list: string;
     isCompleted: boolean;
     dueDate?: string | null;
+    tag: string;
   };
   onToggle: (id: number) => void;
+  onEdit: (item: Props["item"]) => void;
 };
 
-const TaskItem = ({ item, onToggle }: Props) => {
+const TaskItem = ({ item, onToggle, onEdit }: Props) => {
   const status = getDueDateStatus(item.dueDate);
+
   return (
     <Pressable
       onPress={() => onToggle(item.id)}
       style={({ pressed }) => [styles.taskItem, { opacity: 1 }]}
     >
-      <Text style={[styles.taskText, item.isCompleted && styles.completedText]}>
-        {item.list}
-      </Text>
+      <View style={{ flexDirection: "row" }}>
+        <View style={{ width: 160 }}>
+          <Text
+            style={{
+              backgroundColor: TAG_COLORS[item.tag ?? "未分類"] ?? "#7f8c8d",
+              paddingHorizontal: 2,
+              paddingVertical: 1,
+              color: "#fff",
+              alignSelf: "flex-start"
+            }}
+          >
+            [{item.tag}]
+          </Text>
+        </View>
+        <Text
+          style={[styles.taskText, item.isCompleted && styles.completedText]}
+        >
+          {item.list}
+        </Text>
+      </View>
       <Text
         style={[
           styles.dueText,
@@ -30,6 +51,16 @@ const TaskItem = ({ item, onToggle }: Props) => {
       >
         期限: {item.dueDate ?? "未設定"}
       </Text>
+
+      <Pressable
+        onPress={(e) => {
+          e.stopPropagation();
+          onEdit(item);
+        }}
+        style={styles.editButton}
+      >
+        <Text style={styles.editText}>編集</Text>
+      </Pressable>
     </Pressable>
   );
 };
@@ -59,6 +90,16 @@ const styles = StyleSheet.create({
   dueOverdue: {
     color: "#e74c3c",
     fontWeight: "bold",
+  },
+  editButton: {
+    position: "absolute",
+    right: 10,
+    bottom: 5,
+    padding: 5,
+  },
+  editText: {
+    color: "#3498db",
+    fontSize: 12,
   },
 });
 
