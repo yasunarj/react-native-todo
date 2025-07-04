@@ -14,6 +14,8 @@ import AdvancedOptionsPanel from "@/components/AdvancedOptionsPanel";
 import { useTodo } from "@/hooks/useTodo";
 import SearchOptionPanel from "@/components/SearchOptionPanel";
 import TagSummary from "@/components/TagSummary";
+import { useEffect } from "react";
+import { useNotification } from "@/hooks/useNotification";
 
 const TodoScreen = () => {
   const {
@@ -53,12 +55,24 @@ const TodoScreen = () => {
     tagCounts,
   } = useTodo();
 
+  const { registerForPushNotificationsAsync, scheduleNotification } =
+    useNotification();
+
   const colorScheme = useColorScheme();
   const isDarkMode = colorScheme === "dark";
 
   const grouped = groupTasksByDueDate(
     hideCompleted ? filteredTasks.filter((t) => !t.isCompleted) : filteredTasks
   );
+
+  useEffect(() => {
+    registerForPushNotificationsAsync();
+  }, [registerForPushNotificationsAsync]);
+
+  const handleAddTask = () => {
+    addTask();
+    scheduleNotification("タスクを追加", "新しいタスクが追加されました");
+  };
 
   return (
     <View
@@ -78,7 +92,7 @@ const TodoScreen = () => {
           value={task}
           onChangeText={setTask}
         />
-        <Button title="追加" onPress={addTask} />
+        <Button title="追加" onPress={handleAddTask} />
       </View>
 
       <View
@@ -122,7 +136,7 @@ const TodoScreen = () => {
         />
       )}
 
-      <TagSummary tagCounts={tagCounts} isDarkMode={isDarkMode}/>
+      <TagSummary tagCounts={tagCounts} isDarkMode={isDarkMode} />
 
       <View style={{ alignSelf: "flex-end", marginTop: 12 }}>
         <Button
@@ -132,7 +146,7 @@ const TodoScreen = () => {
       </View>
 
       {showSearchOptions && (
-        <SearchOptionPanel 
+        <SearchOptionPanel
           isDarkMode={isDarkMode}
           filterText={filterText}
           setFilterText={setFilterText}
