@@ -2,36 +2,28 @@ import { useState } from "react";
 import { Modal, View, Text, TextInput, Button, StyleSheet } from "react-native";
 import { Picker } from "@react-native-picker/picker";
 import { TAG_OPTIONS } from "@/lib/constans";
-import { TaskState } from "../types/task";
+import { TaskState, EditTaskState  } from "../types/task";
 import DateTimePicker from "@react-native-community/datetimepicker";
 
 type Props = {
   isEditModalVisible: boolean;
   editingTask: TaskState | null;
-  editedText: string;
-  editedDate: Date;
-  editedTag: string;
+  editedState: EditTaskState,
+  setEditedState: React.Dispatch<React.SetStateAction<EditTaskState>>
   setTasks: React.Dispatch<React.SetStateAction<TaskState[]>>;
-  setEditedText: (text: string) => void;
-  setEditedTag: (value: string) => void;
   setShowTagSelect: (value: boolean) => void;
   setIsEditModalVisible: (value: boolean) => void;
-  setEditedDate: (value: Date) => void;
   setEditingTask: (value: TaskState | null) => void;
 };
 
 const EditTaskModal = ({
   isEditModalVisible,
   editingTask,
-  editedText,
-  editedDate,
-  editedTag,
+  editedState,
+  setEditedState,
   setTasks,
-  setEditedText,
-  setEditedTag,
   setShowTagSelect,
   setIsEditModalVisible,
-  setEditedDate,
   setEditingTask,
 }: Props) => {
   const [showModalDatePicker, setShowModalDatePicker] =
@@ -48,20 +40,20 @@ const EditTaskModal = ({
           <Text style={styles.modalText}>タスクを編集</Text>
           <TextInput
             style={styles.modalInput}
-            value={editedText}
-            onChangeText={setEditedText}
+            value={editedState.text}
+            onChangeText={(text) => setEditedState((prev) => ({ ...prev, text }))}
             placeholder="編集内容"
           />
           <Button
-            title={`タグを変更: ${editedTag ?? "未分類"}`}
+            title={`タグを変更: ${editedState.tag ?? "未分類"}`}
             onPress={() => setShowModalTagSelect((prev) => !prev)}
           />
           {showModalTagSelect && (
             <View>
               <Picker
-                selectedValue={editedTag}
-                onValueChange={(itemValue) => {
-                  setEditedTag(itemValue);
+                selectedValue={editedState.tag}
+                onValueChange={(tag) => {
+                  setEditedState((prev) => ({...prev, tag}));
                   setShowTagSelect(false);
                   setShowModalTagSelect(false);
                 }}
@@ -75,19 +67,19 @@ const EditTaskModal = ({
           )}
 
           <Button
-            title={`期限を変更: ${editedDate.toISOString().split("T")[0]}`}
+            title={`期限を変更: ${editedState.date.toISOString().split("T")[0]}`}
             onPress={() => setShowModalDatePicker((prev) => !prev)}
           />
 
           {showModalDatePicker && (
             <DateTimePicker
-              value={editedDate}
+              value={editedState.date}
               mode="date"
               display="default"
-              onChange={(event, selectedDate) => {
+              onChange={(event, date) => {
                 setShowModalDatePicker(false);
-                if (selectedDate) {
-                  setEditedDate(selectedDate);
+                if (date) {
+                  setEditedState((prev) => ({ ...prev, date }));
                 }
               }}
             />
@@ -104,9 +96,9 @@ const EditTaskModal = ({
                 if (!editingTask) return;
                 const updatedTask = {
                   ...editingTask,
-                  list: editedText,
-                  dueDate: editedDate.toISOString().split("T")[0],
-                  tag: editedTag,
+                  list: editedState.text,
+                  dueDate: editedState.date.toISOString().split("T")[0],
+                  tag: editedState.tag,
                 };
 
                 setTasks((prev) =>
